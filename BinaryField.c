@@ -16,25 +16,25 @@ uint64_t f[2] = {pow2to63+1, pow2to63};
 /* f(z) = z^127 + r(z) */
 uint64_t r[2] = {pow2to63+1, 0};
 
-void clear_array(uint64_t * a, int size) {
-	for(int i = 0; i < size; i++) {
+void clear_array(uint64_t * a, int len) {
+	for(int i = 0; i < len; i++) {
 		a[i] = 0;
 	}
 }
 
-void print_array(uint64_t * a, int size) {
-	for(int i = 0; i < size; i++) {
+void print_array(uint64_t * a, int len) {
+	for(int i = 0; i < len; i++) {
 		printf("%" PRIu64, a[i]);
-		if(i + 1 < size) {
+		if(i + 1 < len) {
 			printf(",");
 		}
 	}
 	printf("\n");
 }
 
-void print_polynomial(uint64_t * a, int size) {
+void print_polynomial(uint64_t * a, int len) {
 	int first_flag = 1;
-	for(int i = size - 1; i >= 0; i--) {
+	for(int i = len - 1; i >= 0; i--) {
 		uint64_t digit = pow2to63; //Start with last
 		for(int j = 63; j >= 0; j--) {
 			uint64_t comparison = a[i] & digit;
@@ -61,12 +61,12 @@ void print_polynomial(uint64_t * a, int size) {
 }
 
 /* Precondition: Coefficients are in increasing order, all elements are unique. */
-void convert_to_element(int * coefficients, int size_c, uint64_t *a, int size_a) {
-	clear_array(a, size_a);
+void convert_to_element(int * coefficients, int len_c, uint64_t *a, int len_a) {
+	clear_array(a, len_a);
 	int i = 0, j = 0;
 	int digit = 0;
 	uint64_t digit_val = 1;
-	while(i < size_c && j < size_a) {
+	while(i < len_c && j < len_a) {
 		if(coefficients[i] == digit) {
 			a[j] += digit_val;
 			i++;
@@ -95,13 +95,26 @@ void rand_element(uint64_t * a) {
 	}
 }
 /* Left shifts the polynomial, does not reduce */
-void lshift_polynomial(uint64_t * a, int size) {
+void lshift_polynomial(uint64_t * a, int len) {
 	int carry = 0;
-	for(int i = 0; i < size; i++) {
+	for(int i = 0; i < len; i++) {
 		int carry1 = (a[i] & pow2to63) == pow2to63;
 		a[i] <<= 1;
 		if(carry) {
 			a[i]++;
+		}
+		carry = carry1;
+	}
+}
+
+/* Right shifts the polynomial, does not reduce */
+void rshift_polynomial(uint64_t * a, int len) {
+	int carry = 0;
+	for(int i = len - 1; i >= 0; i--) {
+		int carry1 = a[i] % 2;
+		a[i] /= 2;
+		if(carry) {
+			a[i] += pow2to63;
 		}
 		carry = carry1;
 	}
@@ -112,8 +125,8 @@ void lshift_polynomial(uint64_t * a, int size) {
 * Precondition: Arrays have length 2
 */
 
-void add_ext(uint64_t * a, uint64_t * b, uint64_t * c, int size) {
-	for(int  i = 0; i  < size; i++) {
+void add_ext(uint64_t * a, uint64_t * b, uint64_t * c, int len) {
+	for(int  i = 0; i  < len; i++) {
 		c[i] = a[i] ^ b[i];
 	}
 }
@@ -277,12 +290,47 @@ void mult_polynomial_lrcomb_window(uint64_t * a, uint64_t * b, uint64_t * c, int
 	}
 }
 
-/* Karatsuba 
+/* Karatsuba multiplication NOT DONE YET, also should think more about iterative approach*/
+int has_karatsuba_precomputed = 0;
+
+uint64_t karatsuba_polynomials[256];
+
+void karatsuba_precompute() {
+	uint64_t a[2] = {0,0};
+	uint64_t b[2] = {0,0};
+	uint64_t c[2] = {0,0};
+	
+	//only need half these calcs, commutative mult
+	for(a[0] = 0; a[0] < 16; a[0]++) {
+		for(b[0] = 0; b[0] < 16; b[0]++) {
+			c[0]=0;
+			mult_polynomial_rlcomb(a, b, c);
+			karatsuba_polynomials[a[0]*16+b[0]] = c[0];
+		}
+	}
+	has_karatsuba_precomputed = 1;
+}
+
+void karatsuba_inner(uint64_t * a, uint64_t * b, uint64_t * c, int bitlen) {
+	if(bitlen == 4) {
+		c[0] = karatsuba_polynomials[a[0]*16 + b[0]];
+		c[1] = 0;
+		return;
+	}
+	
+}
+
+void mult_karatsuba_recursive(uint64_t * a, uint64_t * b, uint64_t * c) {
+	if(!has_karatsuba_precomputed) {
+		karatsuba_precompute();
+	}
+	karatsuba_inner(a, b, c, 128);
+}
 
 /*
 * Alg 2.39 Polynomial squaring
 */
-int has_precomputed = 0;
+int has_square_precomputed = 0;
 
 uint16_t squaring_bytes[256];
 
@@ -294,7 +342,7 @@ void squaring_precompute() {
 			}
 		}
 	}
-	has_precomputed = 1;
+	has_square_precomputed = 1;
 }
 
 /*
@@ -304,7 +352,7 @@ void squaring_precompute() {
 */
 void squaring_polynomial(uint64_t * a, uint64_t * c) {
 	/* Step 1 */
-	if(!has_precomputed) {
+	if(!has_square_precomputed) {
 		squaring_precompute();
 	}
 	
@@ -333,7 +381,56 @@ void squaring_polynomial(uint64_t * a, uint64_t * c) {
 	}
 }
 
-/* Recuction */
+/* Alg 2.40 - Modular reduction (one bit at a time) */
+
+int has_reduction_precomputed = 0;
+
+uint64_t reduction_polynomials[64][2];
+
+void reduction_generic_precompute() {
+	reduction_polynomials[0][0] = r[0];
+	reduction_polynomials[0][1] = r[1];
+	for(int i = 1; i < 64; i++) {
+		reduction_polynomials[i][0] = reduction_polynomials[i-1][0];
+		reduction_polynomials[i][1] = reduction_polynomials[i-1][1];
+		lshift_polynomial(reduction_polynomials[i], 2);
+	}
+	
+	has_reduction_precomputed = 1;
+}
+
+/*
+* Reduces c mod f, 
+* after which only the first 2 indices are guaranteed to be correct.
+* Precondition:
+* 	c has at most degree 2m-2
+*/
+void reduction_generic(uint64_t * c) {
+	/* Step 1 */
+	if(!has_reduction_precomputed) {
+		reduction_generic_precompute();
+	}
+	/* Step 2 */
+	uint64_t digit_val = pow2to63 / 8;
+	int index = 3;
+	for(int digit = 252; digit >= 127; digit--) {
+		/* Step 2.1 */
+		if((c[index] & digit_val) == digit_val) {
+			int j = (digit - 127)/64;
+			int k = (digit - 127) - 64*j;
+			add(reduction_polynomials[k], &c[j], &c[j]);
+		}
+		
+		if(digit % 64 == 0) {
+			digit_val = pow2to63;
+			index--;
+		} else {
+			digit_val /= 2;
+		}
+	}
+	//Algorithm in book is slightly wrong for some f, here is a general fix:
+	c[2] &= 0x7FFFFFFFFFFFFFFF;
+}
 
 /*  Alg 2.47 Extended Euclidean algorithm for binary polynomials */
 
@@ -341,8 +438,8 @@ void squaring_polynomial(uint64_t * a, uint64_t * c) {
 * Preconditions:
 *	a has length 2
 */
-uint8_t degree_polynomial(uint64_t * a) {
-	uint8_t digit = 63;
+int degree(uint64_t * a) {
+	int digit = 63;
 	uint64_t digit_val = pow2to63;
 	int j;
 	if(a[1] == 0) {
@@ -362,12 +459,194 @@ uint8_t degree_polynomial(uint64_t * a) {
 }
 
 /*
-* Preconditions:
-*	Arrays have length 2
+* Precondition:
+*	a and b have min length len
 */
-void extended_euclid(uint64_t * a, uint8_t deg_a, uint64_t b, uint8_t deg_b) {
+void swap_arrays(uint64_t * a, uint64_t * b, int len) {
+	for(int i = 0; i < len; i++) {
+		uint64_t temp = a[i];
+		a[i] = b[i];
+		b[i] = temp;
+	}
+}	
+
+//NEED MAJOR OPTIMIZATION
+
+/*
+* Output is d = gcd(a,b), and g,h so that ag + bh = d
+* Preconditions:
+*	All arrays have length 2
+* 	degree(a) <= degree(b)
+*/
+void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uint64_t * h) {
+	/* Step 1 */
+	uint64_t u[2];
+	uint64_t v[2];
+	memcpy(u, a, sizeof(uint64_t)*2);
+	memcpy(v, b, sizeof(uint64_t)*2);
+	int deg_u = degree(u);
+	int deg_v = degree(v);
+
+	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
+	uint64_t g1[2] = {1, 0 };
+	uint64_t g2[2] = {0, 0 };
+	uint64_t h1[2] = {0, 0 };
+	uint64_t h2[2] = {1, 0 };
 	
+	/* Step 3 */
+	while (u[0] > 0 || u[1] > 0) {
+		/* Step 3.1 */
+		int j = deg_u - deg_v;
+		
+		/* Step 3.2 */
+		if(j < 0) {
+			swap_arrays(u, v, 2);
+			swap_arrays(g1, g2, 2);
+			swap_arrays(h1, h2, 2);
+			
+			j = -j;
+			
+			int temp8 = deg_u;
+			deg_u =  deg_v;
+			deg_v = temp8;
+		}
+		/* Step 3.3 */
+		uint64_t shift_polynomial[2];
+		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
+		for(int i = 0; i < j; i++) {
+			lshift_polynomial(shift_polynomial, 2);
+		}
+		add(shift_polynomial, u, u);
+		deg_u = degree(u);
+		
+		/*Step 3.4 */
+		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
+		for(int i = 0; i < j; i++) {
+			lshift_polynomial(shift_polynomial, 2);
+		}
+		add(shift_polynomial, g1, g1);
+		
+		memcpy(shift_polynomial, h2, sizeof(uint64_t)*2);
+		for(int i = 0; i < j; i++) {
+			lshift_polynomial(shift_polynomial, 2);
+		}
+		add(shift_polynomial, h1, h1);
+	}
+	/* Step 4 */
+	swap_arrays(d, v, 2);
+	swap_arrays(g, g2, 2);
+	swap_arrays(h, h2, 2);
+	
+	//Should free stuff?
 }
+
+/* 
+* Alg 2.48 - Inversion in binary field using the extended Euclidean algorithm
+* Preconditions:
+* 	Arrays have length 2
+*	a has max degree 126
+*/
+void inv_euclid(uint64_t * a, uint64_t * inv_a) {
+	/* Step 1 */
+	uint64_t u[2];
+	uint64_t v[2];
+	memcpy(u, a, sizeof(uint64_t)*2);
+	memcpy(v, f, sizeof(uint64_t)*2);
+	int deg_u = degree(u);
+	int deg_v = 127;
+
+	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
+	uint64_t g1[2] = {1, 0 };
+	uint64_t g2[2] = {0, 0 };
+	
+	/* Step 3 */
+	while (!(u[0] == 1 && u[1] == 0)) {
+		/* Step 3.1 */
+		int j = deg_u - deg_v;
+		
+		/* Step 3.2 */
+		if(j < 0) {
+			swap_arrays(u, v, 2);
+			swap_arrays(g1, g2, 2);
+			
+			j = -j;
+			
+			int temp8 = deg_u;
+			deg_u =  deg_v;
+			deg_v = temp8;
+		}
+		/* Step 3.3 */
+		uint64_t shift_polynomial[2];
+		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
+		for(int i = 0; i < j; i++) {
+			lshift_polynomial(shift_polynomial, 2);
+		}
+		add(shift_polynomial, u, u);
+		deg_u = degree(u);
+		
+		/*Step 3.4 */
+		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
+		for(int i = 0; i < j; i++) {
+			lshift_polynomial(shift_polynomial, 2);
+		}
+		add(shift_polynomial, g1, g1);
+	}
+	/* Step 4 */
+	swap_arrays(inv_a, g1, 2);
+}
+
+/*
+* Alg 2.49 - Binary Inversion Algorithm
+* Preconditions:
+* 	Arrays have length 2
+*	a has max degree 126
+*/
+void inv_binary(uint64_t * a, uint64_t * inv_a) {
+	/* Step 1 */
+	uint64_t u[2];
+	uint64_t v[2];
+	memcpy(u, a, sizeof(uint64_t)*2);
+	memcpy(v, f, sizeof(uint64_t)*2);
+	
+	/* Step 2 */
+	uint64_t g1[2] = {1, 0 };
+	uint64_t g2[2] = {0, 0 };
+	
+	/* Step 3 */
+	while(!(u[0] == 1 && u[1] == 0) && !(v[0] == 1 && v[1] == 0)) {
+		/* Step 3.1 */
+		while(u[0] % 2 == 0) {
+			rshift_polynomial(u, 2);
+			if(g1[0] % 2 == 1) {
+				add(f, g1, g1);
+			}
+			rshift_polynomial(g1, 2);
+		}
+		/* Step 3.2 */
+		while(v[0] % 2 == 0) {
+			rshift_polynomial(v, 2);
+			if(g2[0] % 2 == 1) {
+				add(f, g2, g2);
+			}
+			rshift_polynomial(g2, 2);
+		}
+		/* Step 3.3 */
+		if(u[1] > v[1] || (u[1] == v[1] && u[0] > v[0])) {
+			add(v, u, u);
+			add(g2, g1, g1);
+		} else {
+			add(u, v, v);
+			add(g1, g2, g2);
+		}
+	}
+	/* Step 4 */
+	if(u[0] == 1 && u[1] == 0) {
+		swap_arrays(inv_a, g1, 2);
+	} else {
+		swap_arrays(inv_a, g2, 2);
+	}
+}
+
 
 void main() {
 	/* Initialize rand */
@@ -448,6 +727,99 @@ void main() {
 	squaring_polynomial(b, result_squaring);
 	print_polynomial(result_squaring, 4);
 	
-	printf("\nDegree of zero %" PRIu8 "\n", degree_polynomial(zero));
-	printf("\nDegree of b %" PRIu8 "\n", degree_polynomial(b));
+	printf("\nDegree of zero %" PRIu8 "\n", degree(zero));
+	printf("\nDegree of b %" PRIu8 "\n", degree(b));
+	
+	printf("\nExtended Euclidean Algorithm Test 1\n");
+	int coefficients_euclid_a[4] = {3, 4, 6, 7};
+	uint64_t euclid_a[2];
+	convert_to_element(coefficients_euclid_a, 4, euclid_a, 2);
+	printf("euclid_a: ");
+	print_polynomial(euclid_a, 2);
+	
+	int coefficients_euclid_b[4] = {3, 5, 7, 9};
+	uint64_t euclid_b[2];
+	convert_to_element(coefficients_euclid_b, 4, euclid_b, 2);
+	printf("euclid_b: ");
+	print_polynomial(euclid_b, 2);
+	
+	uint64_t result_d[2];
+	uint64_t result_g[2];
+	uint64_t result_h[2];
+	extended_euclid(euclid_a, euclid_b, result_d, result_g, result_h);
+	printf("d: ");
+	print_polynomial(result_d, 2);
+	printf("g: ");
+	print_polynomial(result_g, 2);
+	printf("h: ");
+	print_polynomial(result_h, 2);
+	
+	printf("\nExtended Euclidean Algorithm Test 2\n");
+	printf("c: ");
+	print_polynomial(c, 2);
+	
+	printf("r: ");
+	print_polynomial(r, 2);
+	
+	extended_euclid(c, r, result_d, result_g, result_h);
+	printf("d: ");
+	print_polynomial(result_d, 2);
+	printf("g: ");
+	print_polynomial(result_g, 2);
+	printf("h: ");
+	print_polynomial(result_h, 2);
+	
+	printf("\nRuntime test of Extended Euclidean\n");
+	clock_t start, end;
+	double time_sum = 0;
+	double time_min = 99999;
+	double time_max = -1;
+	int num_tests = 10;
+	for(int i = 0; i < num_tests; i++) {
+		uint64_t test_a[2];
+		rand_element(a);
+		uint64_t test_b[2];
+		rand_element(b);
+		
+		start = clock();
+		extended_euclid(test_a, test_b, result_d, result_g, result_h);
+		end = clock();
+		double time = ((double) (end - start )) / CLOCKS_PER_SEC;
+		printf("Runtime %d: %.6fs\n", i+1, time);
+		time_sum += time;
+		
+		if(time_min > time) {
+			time_min = time;
+		}
+		if(time_max < time) {
+			time_max = time;
+		}
+	}
+	double time_average = time_sum / num_tests;
+	printf("Average runtime: %.6f\n", time_average);
+	printf("Min runtime: %.6f Max runtime: %.6f\n", time_min, time_max);
+	
+	printf("\nInversion of a with Extended Euclid\n");
+	uint64_t inv_a[2];
+	inv_euclid(a, inv_a);
+	print_polynomial(inv_a, 2);
+	printf("\nMultiplying inverse a with a\n");
+	uint64_t should_be1[2];
+	mult_shiftadd(a, inv_a, should_be1);
+	print_polynomial(should_be1, 2);
+	
+	printf("\nInversion of a with Binary Algorithm\n");
+	uint64_t inv_a1[2];
+	inv_binary(a, inv_a1);
+	print_polynomial(inv_a1, 2);
+	
+	printf("\nPrecomputation of reduction polynomials\n");
+	reduction_generic_precompute();
+	print_polynomial(reduction_polynomials[0], 2);
+	print_polynomial(reduction_polynomials[1], 2);
+	print_polynomial(reduction_polynomials[63], 2);
+	
+	printf("\nReducing result of mult using left to right comb method with window\n");
+	reduction_generic(result_mult_lrcombwindow);
+	print_polynomial(result_mult_lrcombwindow, 2);
 }
