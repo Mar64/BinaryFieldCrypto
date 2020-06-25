@@ -1,10 +1,12 @@
 /* For uint64_t */
 #include <inttypes.h> 
+#include <stdbool.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include <binaryfield.h>
 /**  
 * BinaryField.c
 * Implements a binary field with reduction polynomial f(z) = z^127 + z^63 + 1
@@ -22,7 +24,7 @@ void clear_array(uint64_t * a, int len) {
 	}
 }
 
-void print_array(uint64_t * a, int len) {
+void print_array(uint64_t * a, uint32_t len) {
 	for(int i = 0; i < len; i++) {
 		printf("%" PRIu64, a[i]);
 		if(i + 1 < len) {
@@ -32,8 +34,8 @@ void print_array(uint64_t * a, int len) {
 	printf("\n");
 }
 
-void print_polynomial(uint64_t * a, int len) {
-	int first_flag = 1;
+void print_polynomial(uint64_t * a, uint32_t len) {
+	bool first_flag = 1;
 	for(int i = len - 1; i >= 0; i--) {
 		uint64_t digit = pow2to63; //Start with last
 		for(int j = 63; j >= 0; j--) {
@@ -47,8 +49,8 @@ void print_polynomial(uint64_t * a, int len) {
 				if(i == 0 && j == 0) {
 					printf("1");
 				} else {
-					int exponent = 64*i +j;
-					printf("z^%d", exponent);
+					uint64_t exponent = 64*i +j;
+					printf("z^%" PRIu64 "", exponent);
 				}
 			}
 			digit /= 2;
@@ -60,14 +62,23 @@ void print_polynomial(uint64_t * a, int len) {
 	printf("\n");
 }
 
-/* Precondition: Coefficients are in increasing order, all elements are unique. */
-void convert_to_element(int * coefficients, int len_c, uint64_t *a, int len_a) {
+bool equal_polynomials(uint64_t * a, uint64_t * b, uint32_t len) {
+	for(int i = 0; i < len; i++) {
+		if(a[i] != b[i]) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+ /* Precondition: Indices are in increasing order, and are unique. */
+ void index_to_polynomial(uint64_t * indices, int len_i, uint64_t *a, uint32_t len_a) {
 	clear_array(a, len_a);
 	int i = 0, j = 0;
 	int digit = 0;
 	uint64_t digit_val = 1;
-	while(i < len_c && j < len_a) {
-		if(coefficients[i] == digit) {
+	while(i < len_i && j < len_a) {
+		if(indices[i] == digit) {
 			a[j] += digit_val;
 			i++;
 		}
@@ -86,7 +97,7 @@ void convert_to_element(int * coefficients, int len_c, uint64_t *a, int len_a) {
 void rand_element(uint64_t * a) {
 	clear_array(a, 2);
 	int i = 0, j = 0;
-	while(!(i == 2-1 && j == 63)) {
+	while(!(i == 1 && j == 63)) {
 		a[i] = a[i]*2 + rand() % 2;
 		if(j == 63) {
 			i++;
@@ -120,17 +131,16 @@ void rshift_polynomial(uint64_t * a, int len) {
 	}
 }
 
-/* 
-* Alg 2.32 - Addition. Also extended it for special cases.
-* Precondition: Arrays have length 2
-*/
-
 void add_ext(uint64_t * a, uint64_t * b, uint64_t * c, int len) {
 	for(int  i = 0; i  < len; i++) {
 		c[i] = a[i] ^ b[i];
 	}
 }
 
+/* 
+* Alg 2.32 - Addition. Also extended it for special cases.
+* Precondition: Arrays have length 2
+*/
 void add(uint64_t * a, uint64_t * b, uint64_t * c) {
 	add_ext(a, b, c, 2);
 }
@@ -350,7 +360,7 @@ void squaring_precompute() {
 * a has max degree 126, length 2
 * c has length 4
 */
-void squaring_polynomial(uint64_t * a, uint64_t * c) {
+void square_polynomial(uint64_t * a, uint64_t * c) {
 	/* Step 1 */
 	if(!has_square_precomputed) {
 		squaring_precompute();
@@ -429,7 +439,8 @@ void reduction_generic(uint64_t * c) {
 		}
 	}
 	//Algorithm in book is slightly wrong for some f, here is a general fix:
-	c[2] &= 0x7FFFFFFFFFFFFFFF;
+	c[1] &= 0x7FFFFFFFFFFFFFFF;
+	c[2] = c[3] = 0;
 }
 
 /*  Alg 2.47 Extended Euclidean algorithm for binary polynomials */
@@ -647,10 +658,10 @@ void inv_binary(uint64_t * a, uint64_t * inv_a) {
 	}
 }
 
-
-void main() {
+/*
+void main() {*/
 	/* Initialize rand */
-	srand(time(NULL));
+	/*srand(time(NULL));
 	
 	printf("Reduction polynomial f(z): \n");
 	print_polynomial(f, 2);
@@ -663,13 +674,13 @@ void main() {
 	printf("\nFixed polynomial a\n");
 	int a_coefficients[5] = {0, 2, 3, 5, 64};
 	uint64_t a[2];
-	convert_to_element(a_coefficients, 5, a, 2);
+	coefficients_to_polynomial(a_coefficients, 5, a, 2);
 	print_polynomial(a, 2);
 	
 	printf("\nFixed polynomial b\n");
 	int b_coefficients[7] = {1, 2, 4, 8, 16, 32, 64};
 	uint64_t b[2];
-	convert_to_element(b_coefficients, 7, b, 2);
+	coefficients_to_polynomial(b_coefficients, 7, b, 2);
 	print_polynomial(b, 2);
 	
 	printf("\na + b \n");
@@ -683,19 +694,19 @@ void main() {
 	
 	printf("\nFixed polynomial 0\n");
 	uint64_t zero[2];
-	convert_to_element(NULL, 0, zero, 2);
+	coefficients_to_polynomial(NULL, 0, zero, 2);
 	print_polynomial(zero,2);
 	
 	printf("\nFixed polynomial c\n");
 	int c_coefficients[1] = {2};
 	uint64_t c[2];
-	convert_to_element(c_coefficients, 1, c, 2);
+	coefficients_to_polynomial(c_coefficients, 1, c, 2);
 	print_polynomial(c,2);
 	
 	printf("\nFixed polynomial d\n");
 	int d_coefficients[2] = {0, 126};
 	uint64_t d[2];
-	convert_to_element(d_coefficients, 2, d, 2);
+	coefficients_to_polynomial(d_coefficients, 2, d, 2);
 	print_polynomial(d, 2);
 	
 	printf("\nShift-and-add mult d * r\n");
@@ -733,13 +744,13 @@ void main() {
 	printf("\nExtended Euclidean Algorithm Test 1\n");
 	int coefficients_euclid_a[4] = {3, 4, 6, 7};
 	uint64_t euclid_a[2];
-	convert_to_element(coefficients_euclid_a, 4, euclid_a, 2);
+	coefficients_to_polynomial(coefficients_euclid_a, 4, euclid_a, 2);
 	printf("euclid_a: ");
 	print_polynomial(euclid_a, 2);
 	
 	int coefficients_euclid_b[4] = {3, 5, 7, 9};
 	uint64_t euclid_b[2];
-	convert_to_element(coefficients_euclid_b, 4, euclid_b, 2);
+	coefficients_to_polynomial(coefficients_euclid_b, 4, euclid_b, 2);
 	printf("euclid_b: ");
 	print_polynomial(euclid_b, 2);
 	
@@ -822,4 +833,4 @@ void main() {
 	printf("\nReducing result of mult using left to right comb method with window\n");
 	reduction_generic(result_mult_lrcombwindow);
 	print_polynomial(result_mult_lrcombwindow, 2);
-}
+}*/
