@@ -20,7 +20,16 @@ void mult_shiftadd(uint64_t * a, uint64_t * b, uint64_t * c);
 *   c is of length 4
 *   a,b are of max degree 126, length 2
 */
-void mult_polynomial_rlcomb(uint64_t * a, uint64_t * b, uint64_t * c)
+void mult_polynomial_rlcomb(uint64_t * a, uint64_t * b, uint64_t * c);
+
+/*
+* Alg 2.35 Left-to-right comb method for polynomial multiplication
+* Note that it does not reduce the result.
+* Preconditions:
+*   c is of length 4
+*   a,b are of max degree 126, length 2
+*/
+void mult_polynomial_lrcomb(uint64_t * a, uint64_t * b, uint64_t * c);
 
 /*
  * Alg 2.39 Polynomial squaring
@@ -40,6 +49,14 @@ void square_polynomial(uint64_t * a, uint64_t * c);
  * 	c has at most degree 2m-2
  */
 void reduction_generic(uint64_t * c);
+
+/*  Alg 2.47 Extended Euclidean algorithm for binary polynomials
+ * Output is d = gcd(a,b), and g,h so that ag + bh = d
+ * Preconditions:
+ *		All arrays have length 2
+ * 	degree(a) <= degree(b)
+ */
+ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uint64_t * h);
 
 /* ======== Helper Methods: ============= */
 
