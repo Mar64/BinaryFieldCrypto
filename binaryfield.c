@@ -487,7 +487,7 @@ void swap_arrays(uint64_t * a, uint64_t * b, int len) {
 * Output is d = gcd(a,b), and g,h so that ag + bh = d
 * Preconditions:
 *	All arrays have length 2
-* 	degree(a) <= degree(b)
+* 	0 < degree(a) <= degree(b)
 */
 void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uint64_t * h) {
 	/* Step 1 */
@@ -555,7 +555,7 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 * Alg 2.48 - Inversion in binary field using the extended Euclidean algorithm
 * Preconditions:
 * 	Arrays have length 2
-*	a has max degree 126
+*	a has max degree 126 and is nonzero
 */
 void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 	/* Step 1 */

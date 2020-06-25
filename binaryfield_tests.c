@@ -1105,8 +1105,263 @@ void mult_polynomial_lrcomb_correctness_tests() {
 
 /* extended_euclid */
 
-void extended_euclid_correctness_tests() {
+result_t extended_euclid_coprime_case() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[3] = {0, 3, 40};
+	index_to_polynomial(indicesa, 3, a, 2);
+	uint64_t b[2];
+	uint64_t indicesb[2] = {2, 83};
+	index_to_polynomial(indicesb, 2, b, 2);
+	uint64_t expected_gcd[2] = {1, 0};
+	uint64_t expected_g[2];
+	uint64_t indicesg[43] = {0, 2, 3, 5, 6, 7, 9, 12, 14, 15, 19, 20, 22, 23, 24, 25, 27, 28, 30, 32, 33, 35, 36, 39, 41, 43, 44, 45, 48, 49, 51, 55, 58, 59, 60, 61, 65, 67, 72, 73, 79, 81, 82};
+	index_to_polynomial(indicesg, 46, expected_g, 2);
+	uint64_t expected_h[2];
+	uint64_t indicesh[16] = {0, 5, 6, 8, 12, 15, 16, 17, 18, 22, 24, 29, 30, 36, 38, 39};
+	index_to_polynomial(indicesh, 17, expected_h, 2);
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
 	
+	//Act
+	extended_euclid(a, b, gcd, g, h);
+	
+	//Assert
+	bool correct_gcd = equal_polynomials(gcd, expected_gcd, 2);
+	bool correct_g = equal_polynomials(g, expected_g, 2);
+	bool correct_h = equal_polynomials(h, expected_h, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct_gcd && correct_g && correct_h;
+	result.fail_msg = "extended_euclid_coprime_case FAILED";
+	return result;
+}
+
+result_t extended_euclid_common_factor_case() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[4] = {1, 2, 4, 5};
+	index_to_polynomial(indicesa, 4, a, 2);
+	uint64_t b[2];
+	uint64_t indicesb[4] = {3, 4, 5, 6};
+	index_to_polynomial(indicesb, 4, b, 2);
+	uint64_t expected_gcd[2];
+	uint64_t indicesgcd[2] = {1, 3};
+	index_to_polynomial(indicesgcd, 2, expected_gcd, 2);
+	uint64_t expected_g[2];
+	uint64_t indicesg[3] = {0, 1, 2};
+	index_to_polynomial(indicesg, 3, expected_g, 2);
+	uint64_t expected_h[2];
+	uint64_t indicesh[2] = {0, 1};
+	index_to_polynomial(indicesh, 2, expected_h, 2);
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	
+	//Act
+	extended_euclid(a, b, gcd, g, h);
+	
+	//Assert
+	bool correct_gcd = equal_polynomials(gcd, expected_gcd, 2);
+	bool correct_g = equal_polynomials(g, expected_g, 2);
+	bool correct_h = equal_polynomials(h, expected_h, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct_gcd && correct_g && correct_h;
+	result.fail_msg = "extended_euclid_common_factor_case FAILED";
+	return result;
+}
+
+result_t extended_euclid_cross_reference_g_and_h() {
+	//Arrange
+	uint64_t a[2] = {528723069, 9831505791};
+	uint64_t b[2] = {120687981035, 8412205886};
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	uint64_t ag[2];
+	uint64_t bh[2];
+	uint64_t sum[2];
+	
+	//Act
+	extended_euclid(a, b, gcd, g, h);
+	mult_shiftadd(a, g, ag);
+	mult_shiftadd(b, h, bh);
+	add(ag, bh, sum);
+	
+	//Assert
+	bool correct = equal_polynomials(sum, gcd, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "extended_euclid_cross_reference_g_and_h FAILED";
+	return result;
+}
+
+result_t extended_euclid_not_modifying_operands() {
+	//Arrange
+	uint64_t a0[2] = {252242103978283, 7892013649722};
+	uint64_t a1[2] = {252242103978283, 7892013649722};
+	uint64_t b0[2] = {710369852471, 3028945612774};
+	uint64_t b1[2] = {710369852471, 3028945612774};
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	
+	//Act
+	extended_euclid(a1, b1, gcd, g, h);
+	
+	//Assert
+	bool samea = equal_polynomials(a0, a1, 2);
+	bool sameb = equal_polynomials(b0, b1, 2);
+	
+	//Return
+	result_t result;
+	result.success = samea && sameb;
+	result.fail_msg = "extended_euclid_not_modifying_operands FAILED";
+	return result;
+}
+
+result_t extended_euclid_one_with_nonzero_has_gcd_one() {
+	//Arrange
+	uint64_t one[2] = {1, 0};
+	uint64_t b[2] = {7645869580749671, 758135679};
+	uint64_t expected_gcd[2] = {1, 0};
+	uint64_t expected_g[2] = {1, 0};
+	uint64_t expected_h[2] = {0, 0};
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	
+	//Act
+	extended_euclid(one, b, gcd, g, h);
+	
+	//Assert
+	bool correct_gcd = equal_polynomials(gcd, expected_gcd, 2);
+	bool correct_g = equal_polynomials(g, expected_g, 2);
+	bool correct_h = equal_polynomials(h, expected_h, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct_gcd && correct_g && correct_h;
+	result.fail_msg = "extended_euclid_one_with_nonzero_has_gcd_one FAILED";
+	return result;
+}
+
+void extended_euclid_correctness_tests() {
+	eval_test(extended_euclid_coprime_case());
+	eval_test(extended_euclid_common_factor_case());
+	eval_test(extended_euclid_cross_reference_g_and_h());
+	eval_test(extended_euclid_not_modifying_operands());
+	eval_test(extended_euclid_one_with_nonzero_has_gcd_one());
+}
+
+/* ================================ inv_euclid ================================ */
+
+result_t inv_euclid_case() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[3] = {126};
+	index_to_polynomial(indicesa, 3, a, 2);
+	uint64_t expected_inva[2];
+	uint64_t indicesinva[3] = {0, 1, 64};
+	index_to_polynomial(indicesinva, 3, expected_inva, 2);
+	uint64_t inva[2];
+	
+	//Act
+	inv_euclid(a, inva);
+	
+	//Assert
+	bool correct = equal_polynomials(inva, expected_inva, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_euclid_case FAILED";
+	return result;
+}
+
+result_t inv_euclid_not_modifying_operands() {
+	//Arrange
+	uint64_t a0[2] = {18820369423762, 77812309820}; 
+	uint64_t a1[2] = {18820369423762, 77812309820}; 
+	uint64_t inva[2];
+	
+	//Act
+	inv_euclid(a1, inva);
+	
+	//Assert
+	bool correct = equal_polynomials(a0, a1, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_euclid_not_modifying_operands FAILED";
+	return result;
+}
+
+result_t inv_euclid_crossreference_extended_euclid() {
+	//Arrange
+	uint64_t a[2] = {68791025222456, 910257638};
+	uint64_t f[2];
+	uint64_t indicesf[3] = {0, 63, 127};
+	index_to_polynomial(indicesf, 3, f, 2);
+	uint64_t inva[2];
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	
+	//Act
+	inv_euclid(a, inva);
+	extended_euclid(a, f, gcd, g, h);
+	
+	//Assert
+	bool correct = equal_polynomials(inva, g, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_euclid_crossreference_extended_euclid FAILED";
+	return result;
+}
+
+result_t inv_euclid_product_of_inverses_is_inverse_of_product() {
+	//Arrange
+	uint64_t a[2] = {25846057920451, 2468420775};
+	uint64_t b[2] = {31148700972, 7201781698};
+	uint64_t ab[2];
+	uint64_t inva[2];
+	uint64_t invb[2];
+	uint64_t inva_times_invb[2];
+	uint64_t prod[2];
+	uint64_t one[2] = {1, 0};
+	
+	//Act
+	mult_shiftadd(a, b, ab);
+	inv_euclid(a, inva);
+	inv_euclid(b, invb);
+	mult_shiftadd(inva, invb, inva_times_invb);
+	mult_shiftadd(ab, inva_times_invb, prod);
+	
+	//Assert
+	bool correct = equal_polynomials(prod, one, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_euclid_product_of_inverses_is_inverse_of_product FAILED";
+	return result;
+}
+
+void inv_euclid_correctness_tests() {
+	eval_test(inv_euclid_case());
+	eval_test(inv_euclid_not_modifying_operands());
+	eval_test(inv_euclid_crossreference_extended_euclid());
+	eval_test(inv_euclid_product_of_inverses_is_inverse_of_product());
 }
 
 void run_tests() {
@@ -1119,6 +1374,7 @@ void run_tests() {
 	mult_polynomial_rlcomb_correctness_tests();
 	mult_polynomial_lrcomb_correctness_tests();
 	extended_euclid_correctness_tests();
+	inv_euclid_correctness_tests();
 }
 
 int main() {

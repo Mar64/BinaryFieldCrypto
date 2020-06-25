@@ -54,9 +54,17 @@ void reduction_generic(uint64_t * c);
  * Output is d = gcd(a,b), and g,h so that ag + bh = d
  * Preconditions:
  *		All arrays have length 2
- * 	degree(a) <= degree(b)
+ * 	0 < degree(a) <= degree(b)
  */
  void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uint64_t * h);
+ 
+ /* 
+* Alg 2.48 - Inversion in binary field using the extended Euclidean algorithm
+* Preconditions:
+* 	Arrays have length 2
+*	a has max degree 126 and is nonzero
+*/
+void inv_euclid(uint64_t * a, uint64_t * inv_a);
 
 /* ======== Helper Methods: ============= */
 
