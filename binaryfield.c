@@ -12,6 +12,7 @@
 * Implements a binary field with reduction polynomial f(z) = z^127 + z^63 + 1
 */
 #define pow2to63 9223372036854775808U
+#define pow2to56 72057594037927936U
 
 /* Reduction polynomial f(z) = z^127 + z^63 + 1 */
 uint64_t f[2] = {pow2to63+1, pow2to63};
@@ -298,6 +299,68 @@ void mult_polynomial_lrcomb_window(uint64_t * a, uint64_t * b, uint64_t * c, int
 			}
 		}
 	}
+}
+
+/*
+* Alg 2.36 Left-to-right comb method for polynomial multiplication with window size 8
+* Note that it does not reduce the result.
+* Preconditions:
+*   c is of length 4
+*   a,b are of max degree 126, length 2
+*/
+void mult_polynomial_lrcomb_window8(uint64_t * a, uint64_t * b, uint64_t * c) {
+	/* Step 1 */
+	uint64_t num_polynomials = 256;
+	
+	/* Product can't actually fill more than first 3 words, but need to conform to mult */
+	uint64_t bu[num_polynomials][4]; 
+	for(uint64_t i = 0; i < num_polynomials; i++) {
+		clear_array(bu[i], 4);
+		uint64_t u[2] = {i, 0};
+		/* This is faster method than lr, shift with B instead of C: */
+		mult_polynomial_rlcomb(u, b, bu[i]); 
+	}
+	/* Step 2 */
+	clear_array(c, 4);
+	
+	/* Step 3 */
+	uint64_t digit_val = pow2to63;
+	for(int k = 7; k >= 0; k--) {
+		/* Step 3.1 */
+		for(int j = 0; j < 2; j++) {
+			int u = 0;
+			uint64_t digit_val1 = digit_val;
+			for(int i = 7; i >= 0; i--) {
+				u <<= 1;
+				if((a[j] & digit_val1) == digit_val1) {
+					u++;
+				}
+				digit_val1 /= 2;
+			}
+			add_ext(bu[u], &c[j], &c[j], 3);
+		}
+		digit_val /= num_polynomials;
+		
+		/* Step 3.2 */
+		if(k != 0) {
+			//print_polynomial(c, 4);
+			//printf("\n");
+			uint64_t old_carry = 0;
+			uint64_t carry = 0;
+			for(int i = 0; i < 4; i++) {
+				carry = c[i] & 0xFF00000000000000;
+				carry /= pow2to56;
+				//printf("i %d old_carry %" PRIu64 " carry %" PRIu64 " old c %" PRIu64 " ", i, old_carry, carry, c[i]);
+				c[i] <<= 8;
+				c[i] |= old_carry;
+				//printf("new c %" PRIu64 "\n", c[i]);
+				old_carry = carry;
+			}
+			//print_polynomial(c, 4);
+			//printf("\n");
+		}
+	}
+	//printf("\n done \n ");
 }
 
 /* Karatsuba multiplication NOT DONE YET, also should think more about iterative approach*/

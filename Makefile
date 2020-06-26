@@ -1,5 +1,5 @@
 CFLAGS  = -I .
-DEPS = hellomake.h
+DEPS = binaryfield.h binaryfield_tests.h
 OBJS = binaryfield.o binaryfield_tests.o
 
 %.o: %.c $(DEPS)

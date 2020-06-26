@@ -32,6 +32,15 @@ void mult_polynomial_rlcomb(uint64_t * a, uint64_t * b, uint64_t * c);
 void mult_polynomial_lrcomb(uint64_t * a, uint64_t * b, uint64_t * c);
 
 /*
+* Alg 2.36 Left-to-right comb method for polynomial multiplication with window size 8
+* Note that it does not reduce the result.
+* Preconditions:
+*   c is of length 4
+*   a,b are of max degree 126, length 2
+*/
+void mult_polynomial_lrcomb_window8(uint64_t * a, uint64_t * b, uint64_t * c);
+
+/*
  * Alg 2.39 Polynomial squaring
  *
  * Preconditions:
@@ -65,6 +74,14 @@ void reduction_generic(uint64_t * c);
 *	a has max degree 126 and is nonzero
 */
 void inv_euclid(uint64_t * a, uint64_t * inv_a);
+
+/*
+* Alg 2.49 - Binary Inversion Algorithm
+* Preconditions:
+* 	Arrays have length 2
+*	a has max degree 126
+*/
+void inv_binary(uint64_t * a, uint64_t * inv_a);
 
 /* ======== Helper Methods: ============= */
 

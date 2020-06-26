@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include <binaryfield.h>
-
+#include <binaryfield_tests.h>
 
 /* ============================== Setup for Tests ===========================*/
 
@@ -12,20 +12,32 @@ typedef struct result_st {
 	char * fail_msg;
 } result_t;
 
-uint64_t num_tests = 0;
-uint64_t num_passed = 0;
+uint64_t num_tests_run = 0;
+uint64_t num_tests_passed = 0;
 
 void eval_test(result_t result) {
-	num_tests++;
+	num_tests_run++;
 	if(result.success) {
-		num_passed++;
+		num_tests_passed++;
 	} else {
 		printf("\n%s\n", result.fail_msg);
 	}
 }
 
+uint64_t get_num_tests_run() {
+	return num_tests_run;
+}
+
+uint64_t get_num_tests_passed() {
+	return num_tests_passed;
+}
+
 void print_score() {
-	printf("\n%" PRIu64 " out of %" PRIu64 " tests passed.\n", num_passed, num_tests);
+	printf("\n%" PRIu64 " out of %" PRIu64 " tests passed.\n", num_tests_passed, num_tests_run);
+}
+
+void reset_score() {
+	num_tests_run = num_tests_passed = 0;
 }
 
 /* ============================ equal_polynomials ========================== */
@@ -1095,6 +1107,7 @@ void mult_polynomial_lrcomb_correctness_tests() {
 	eval_test(mult_polynomial_lrcomb_not_modifying_operands());
 	eval_test(mult_polynomial_lrcomb_correct_reduced_product());
 	eval_test(mult_polynomial_lrcomb_crossreference_shiftadd());
+	eval_test(mult_polynomial_lrcomb_crossreference_square());
 	eval_test(mult_polynomial_lrcomb_crossreference_rlcomb());
 	eval_test(mult_polynomial_lrcomb_associative());
 	eval_test(mult_polynomial_lrcomb_commutative());
@@ -1103,7 +1116,294 @@ void mult_polynomial_lrcomb_correctness_tests() {
 	eval_test(mult_polynomial_lrcomb_nonzero_with_zero_is_zero());
 }
 
-/* extended_euclid */
+/* ======================= mult_polynomial_lrcomb_window8 =============== */
+
+
+result_t mult_polynomial_lrcomb_window8_case() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[4] = {0, 13, 20, 126};
+	index_to_polynomial(indicesa, 4, a, 2);
+	uint64_t b[2];
+	uint64_t indicesb[4] = {1, 20, 40, 50};
+	index_to_polynomial(indicesb, 4, b, 2);
+	uint64_t expected_ab[4];
+	uint64_t indicesab[14] = {1, 14, 20, 21, 33, 50, 53, 60, 63, 70, 127, 146, 166, 176};
+	index_to_polynomial(indicesab, 14, expected_ab, 4);
+	uint64_t ab[4];
+	//1 + z^20 + z^40 + z^50 +  z^14 + z^33 + z^53 + z^63  + z^21 + z^40 + z^60 + z^70 + z^127 + z^146 + z^166 + z^176
+	// 1, 14, 20, 21, 33, 50, 53, 60, 63, 70, 127, 146, 166, 176
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab);
+	
+	//Assert
+	bool correct = equal_polynomials(ab, expected_ab, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_case FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_not_modifying_operands() {
+	//Arrange
+	uint64_t a0[2] = {12529730, 896271426};
+	uint64_t a1[2] = {12529730, 896271426};
+	uint64_t b0[2] = {93478201365, 87966666};
+	uint64_t b1[2] = {93478201365, 87966666};
+	uint64_t ab[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a1, b1, ab);
+	
+	//Assert
+	bool samea = equal_polynomials(a0, a1, 2);
+	bool sameb = equal_polynomials(b0, b1, 2);
+	
+	//Return
+	result_t result;
+	result.success = samea && sameb;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_not_modifying_operands FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_correct_reduced_product() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[2] = {64, 119};
+	index_to_polynomial(indicesa, 2, a, 2);
+	uint64_t b[2];
+	uint64_t indicesb[3] = {7, 11, 13};
+	index_to_polynomial(indicesb, 3, b, 2);
+	uint64_t expected_ab[4];
+	uint64_t indicesab[8] = {3, 5, 66, 68, 71, 75, 77, 126};
+	index_to_polynomial(indicesab, 8, expected_ab, 4);
+	uint64_t ab[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab);
+	reduction_generic(ab);
+	
+	//Assert
+	bool correct = equal_polynomials(ab, expected_ab, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_correct_reduced_product FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_crossreference_shiftadd() {
+	//Arrange
+	uint64_t a[2] = {259398971125881, 98752520481};
+	uint64_t b[2] = {973025584, 89930471};
+	uint64_t ab0[4];
+	uint64_t ab1[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab0);
+	reduction_generic(ab0);
+	mult_shiftadd(a, b, ab1);
+	
+	//Assert
+	bool correct = equal_polynomials(ab0, ab1, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_crossreference_shiftadd FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_crossreference_square() {
+	//Arrange
+	uint64_t a[2] = {4682043888526, 7512369852};
+	uint64_t aprod[4];
+	uint64_t asquare[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, a, aprod);
+	square_polynomial(a, asquare);
+	
+	//Assert
+	bool correct = equal_polynomials(aprod, asquare, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_crossreference_square FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_crossreference_rlcomb() {
+	//Arrange
+	uint64_t a[2] = {60048762562, 1698205};
+	uint64_t b[2] = {9976523204, 3078924893};
+	uint64_t ab0[4];
+	uint64_t ab1[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab0);
+	mult_polynomial_rlcomb(a, b, ab1);
+	
+	//Assert
+	bool correct = equal_polynomials(ab0, ab1, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_crossreference_rlcomb FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_crossreference_lrcomb() {
+	//Arrange
+	uint64_t a[2] = {3489732302458, 716982012693};
+	uint64_t b[2] = {258549317521, 27759624};
+	uint64_t ab0[4];
+	uint64_t ab1[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab0);
+	mult_polynomial_lrcomb(a, b, ab1);
+	
+	//Assert
+	bool correct = equal_polynomials(ab0, ab1, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_crossreference_lrcomb FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_associative() {
+	//Arrange
+	uint64_t a[2] = {2578901634820, 9687512123};
+	uint64_t b[2] = {256623241,78229720};
+	uint64_t c[2] = {9387501468, 1479983045501};
+	uint64_t ab[4];
+	uint64_t bc[4];
+	uint64_t abc0[4];
+	uint64_t abc1[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab);
+	reduction_generic(ab);
+	mult_polynomial_lrcomb_window8(ab, c, abc0);
+	reduction_generic(abc0);
+	mult_polynomial_lrcomb_window8(b, c, bc);
+	reduction_generic(bc);
+	mult_polynomial_lrcomb_window8(a, bc, abc1);
+	reduction_generic(abc1);
+	
+	//Assert
+	bool correct = equal_polynomials(abc0, abc1, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_associative FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_commutative() {
+	//Arrange
+	uint64_t a[2] = {501789354, 918834462};
+	uint64_t b[2] = {300788114, 77824889};
+	uint64_t ab[4];
+	uint64_t ba[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, b, ab);
+	mult_polynomial_lrcomb_window8(b, a, ba);
+	
+	//Assert
+	bool correct = equal_polynomials(ab, ba, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_commutative FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_nonzero_with_one_is_same() {
+	//Arrange
+	uint64_t a[4] = {501789354, 918834462, 0, 0};
+	uint64_t one[2] = {1, 0};
+	uint64_t prod[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, one, prod);
+	
+	//Assert
+	bool correct = equal_polynomials(prod, a, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_nonzero_with_one_is_same FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_zero_with_one_is_zero() {
+	//Arrange
+	uint64_t zero[4] = {0, 0, 0, 0};
+	uint64_t one[2] = {1, 0};
+	uint64_t prod[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(zero, one, prod);
+	
+	//Assert
+	bool correct = equal_polynomials(prod, zero, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_zero_with_one_is_zero FAILED";
+	return result;
+}
+
+result_t mult_polynomial_lrcomb_window8_nonzero_with_zero_is_zero() {
+	//Arrange
+	uint64_t a[2] = {9328775055, 113355781};
+	uint64_t zero[4] = {0, 0, 0, 0};
+	uint64_t prod[4];
+	
+	//Act
+	mult_polynomial_lrcomb_window8(a, zero, prod);
+	
+	//Assert
+	bool correct = equal_polynomials(prod, zero, 4);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "mult_polynomial_lrcomb_window8_nonzero_with_zero_is_zero FAILED";
+	return result;
+}
+
+void mult_polynomial_lrcomb_window8_correctness_tests() {
+	eval_test(mult_polynomial_lrcomb_window8_case());
+	eval_test(mult_polynomial_lrcomb_not_modifying_operands());
+	eval_test(mult_polynomial_lrcomb_correct_reduced_product());
+	eval_test(mult_polynomial_lrcomb_window8_crossreference_shiftadd());
+	eval_test(mult_polynomial_lrcomb_window8_crossreference_square());
+	eval_test(mult_polynomial_lrcomb_window8_crossreference_rlcomb());
+	eval_test(mult_polynomial_lrcomb_window8_crossreference_lrcomb());
+	eval_test(mult_polynomial_lrcomb_window8_associative());
+	eval_test(mult_polynomial_lrcomb_window8_commutative());
+	eval_test(mult_polynomial_lrcomb_window8_nonzero_with_one_is_same());
+	eval_test(mult_polynomial_lrcomb_window8_zero_with_one_is_zero());
+	eval_test(mult_polynomial_lrcomb_window8_nonzero_with_zero_is_zero());
+}
+
+/* =======================extended_euclid ============================== */
 
 result_t extended_euclid_coprime_case() {
 	//Arrange
@@ -1285,7 +1585,7 @@ result_t inv_euclid_case() {
 	return result;
 }
 
-result_t inv_euclid_not_modifying_operands() {
+result_t inv_euclid_not_modifying_operand() {
 	//Arrange
 	uint64_t a0[2] = {18820369423762, 77812309820}; 
 	uint64_t a1[2] = {18820369423762, 77812309820}; 
@@ -1359,9 +1659,134 @@ result_t inv_euclid_product_of_inverses_is_inverse_of_product() {
 
 void inv_euclid_correctness_tests() {
 	eval_test(inv_euclid_case());
-	eval_test(inv_euclid_not_modifying_operands());
+	eval_test(inv_euclid_not_modifying_operand());
 	eval_test(inv_euclid_crossreference_extended_euclid());
 	eval_test(inv_euclid_product_of_inverses_is_inverse_of_product());
+}
+
+/* =================== inv_binary ========================= */
+
+result_t inv_binary_case() {
+	//Arrange
+	uint64_t a[2];
+	uint64_t indicesa[2] = {1, 64};
+	index_to_polynomial(indicesa, 2, a, 2);
+	uint64_t expected_inva[2];
+	uint64_t indicesinva[3] = {61, 125, 126};
+	index_to_polynomial(indicesinva, 3, expected_inva, 2);
+	uint64_t inva[2];
+	
+	//Act
+	inv_binary(a, inva);
+	
+	//Assert
+	bool correct = equal_polynomials(inva, expected_inva, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_binary_case FAILED";
+	return result;
+}
+
+result_t inv_binary_not_modifying_operand() {
+	//Arrange
+	uint64_t a0[2] = {711032552186, 801382846842977};
+	uint64_t a1[2] = {711032552186, 801382846842977};
+	uint64_t inva[2];
+	
+	//Act
+	inv_binary(a1, inva);
+	
+	//Assert
+	bool correct = equal_polynomials(a0, a1, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_binary_not_modifying_operand FAILED";
+	return result;
+}
+
+result_t inv_binary_crossreference_extended_euclid() {
+	//Arrange
+	uint64_t a[2] = {5489300711, 9782012354};
+	uint64_t f[2];
+	uint64_t indicesf[3] = {0, 63, 127};
+	index_to_polynomial(indicesf, 3, f, 2);
+	uint64_t inva[2];
+	uint64_t gcd[2];
+	uint64_t g[2];
+	uint64_t h[2];
+	
+	//Act
+	inv_binary(a, inva);
+	extended_euclid(a, f, gcd, g, h);
+	
+	//Assert
+	bool correct = equal_polynomials(inva, g, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_binary_crossreference_extended_euclid FAILED";
+	return result;
+}
+
+result_t inv_binary_crossreference_inv_euclid() {
+	//Arrange
+	uint64_t a[2] = {469820358228, 972302255};
+	uint64_t inva0[2];
+	uint64_t inva1[2];
+	
+	//Act
+	inv_binary(a, inva0);
+	inv_euclid(a, inva1);
+	
+	//Assert
+	bool correct = equal_polynomials(inva0, inva1, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_binary_crossreference_inv_euclid FAILED";
+	return result;
+}
+
+result_t inv_binary_product_of_inverses_is_inverse_of_product() {
+	//Arrange
+	uint64_t a[2] = {3790115856821, 403885642179};
+	uint64_t b[2] = {617459943, 942720364782};
+	uint64_t ab[2];
+	uint64_t inva[2];
+	uint64_t invb[2];
+	uint64_t inva_times_invb[2];
+	uint64_t prod[2];
+	uint64_t one[2] = {1, 0};
+	
+	//Act
+	mult_shiftadd(a, b, ab);
+	inv_binary(a, inva);
+	inv_binary(b, invb);
+	mult_shiftadd(inva, invb, inva_times_invb);
+	mult_shiftadd(ab, inva_times_invb, prod);
+	
+	//Assert
+	bool correct = equal_polynomials(prod, one, 2);
+	
+	//Return
+	result_t result;
+	result.success = correct;
+	result.fail_msg = "inv_binary_product_of_inverses_is_inverse_of_product FAILED";
+	return result;
+}
+
+void inv_binary_correctness_tests() {
+	eval_test(inv_binary_case());
+	eval_test(inv_binary_not_modifying_operand());
+	eval_test(inv_binary_crossreference_extended_euclid());
+	eval_test(inv_binary_crossreference_inv_euclid());
+	eval_test(inv_binary_product_of_inverses_is_inverse_of_product());
 }
 
 void run_tests() {
@@ -1373,8 +1798,10 @@ void run_tests() {
 	square_polynomial_correctness_tests();
 	mult_polynomial_rlcomb_correctness_tests();
 	mult_polynomial_lrcomb_correctness_tests();
+	mult_polynomial_lrcomb_window8_correctness_tests();
 	extended_euclid_correctness_tests();
 	inv_euclid_correctness_tests();
+	inv_binary_correctness_tests();
 }
 
 int main() {
