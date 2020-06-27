@@ -1,10 +1,12 @@
+#include <binaryfield.h>
+
 uint64_t get_num_tests_run();
 
 uint64_t get_num_tests_passed();
 
-void print_score();
+void print_test_score();
 
-void reset_score();
+void reset_test_score();
 
 void run_tests();
 

@@ -1,11 +1,3 @@
-/* For uint64_t */
-#include <inttypes.h> 
-#include <stdbool.h> 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
 #include <binaryfield.h>
 /**  
 * BinaryField.c
@@ -93,8 +85,11 @@ bool equal_polynomials(uint64_t * a, uint64_t * b, uint32_t len) {
 	}
 }
 
-//Should gen random elements of field (set last bit 0)
-//Not optimal in any way, is there better way of gen random 64 bits?
+ /*
+  * Generates a random member of the binary field.
+  * Precondition:
+  * 	a has length 2
+  */
 void rand_element(uint64_t * a) {
 	clear_array(a, 2);
 	int i = 0, j = 0;
@@ -106,6 +101,7 @@ void rand_element(uint64_t * a) {
 		j = (j+1) % 64;
 	}
 }
+
 /* Left shifts the polynomial, does not reduce */
 void lshift_polynomial(uint64_t * a, int len) {
 	int carry = 0;
@@ -200,7 +196,9 @@ void mult_shiftadd(uint64_t * a, uint64_t * b, uint64_t * c) {
 void mult_polynomial_rlcomb(uint64_t * a, uint64_t * b, uint64_t * c) {
 	/* Step 0, preserve b */
 	uint64_t b1[3]; //Longer to not lose bits when shifting
-	memcpy(b1, b, sizeof(uint64_t)*2);
+	//memcpy(b1, b, sizeof(uint64_t)*2);
+	b1[0] = b[0];
+	b1[1] = b[1];
 	b1[2] = 0;
 	
 	/* Step 1 */
@@ -343,24 +341,17 @@ void mult_polynomial_lrcomb_window8(uint64_t * a, uint64_t * b, uint64_t * c) {
 		
 		/* Step 3.2 */
 		if(k != 0) {
-			//print_polynomial(c, 4);
-			//printf("\n");
 			uint64_t old_carry = 0;
 			uint64_t carry = 0;
 			for(int i = 0; i < 4; i++) {
 				carry = c[i] & 0xFF00000000000000;
 				carry /= pow2to56;
-				//printf("i %d old_carry %" PRIu64 " carry %" PRIu64 " old c %" PRIu64 " ", i, old_carry, carry, c[i]);
 				c[i] <<= 8;
 				c[i] |= old_carry;
-				//printf("new c %" PRIu64 "\n", c[i]);
 				old_carry = carry;
 			}
-			//print_polynomial(c, 4);
-			//printf("\n");
 		}
 	}
-	//printf("\n done \n ");
 }
 
 /* Karatsuba multiplication NOT DONE YET, also should think more about iterative approach*/
@@ -473,11 +464,12 @@ void reduction_generic_precompute() {
 }
 
 /*
-* Reduces c mod f, 
-* after which only the first 2 indices are guaranteed to be correct.
-* Precondition:
-* 	c has at most degree 2m-2
-*/
+ * Reduces c mod f, 
+ * after which only the first 2 indices are guaranteed to be correct.
+ * Precondition:
+ * 	c has at most degree 2m-2
+ *		c has length 4
+ */
 void reduction_generic(uint64_t * c) {
 	/* Step 1 */
 	if(!has_reduction_precomputed) {

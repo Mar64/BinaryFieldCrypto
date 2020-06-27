@@ -1,3 +1,9 @@
+#include <inttypes.h>
+#include <stdbool.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 /* 
  * Alg 2.32 - Addition. Also extended it for special cases.
  * Precondition: Arrays have length 2
@@ -56,6 +62,7 @@ void square_polynomial(uint64_t * a, uint64_t * c);
  * after which only the first 2 indices are guaranteed to be correct.
  * Precondition:
  * 	c has at most degree 2m-2
+ *		c has length 4
  */
 void reduction_generic(uint64_t * c);
 
@@ -100,5 +107,14 @@ void print_array(uint64_t * a, uint32_t len);
   */
  bool equal_polynomials(uint64_t * a, uint64_t * b, uint32_t len);
  
- /* Precondition: Indices are in increasing order, and are unique. */
+ /* 
+  * Precondition: Indices are in increasing order, and are unique. 
+  */
  void index_to_polynomial(uint64_t * indices, int len_i, uint64_t *a, uint32_t len_a);
+ 
+ /*
+  * Generates a random member of the binary field.
+  * Precondition:
+  * 	a has length 2
+  */
+ void rand_element(uint64_t * a);

@@ -1,8 +1,5 @@
-#include <inttypes.h>
-#include <stdbool.h> 
-#include <stdio.h>
 
-#include <binaryfield.h>
+
 #include <binaryfield_tests.h>
 
 /* ============================== Setup for Tests ===========================*/
@@ -32,11 +29,11 @@ uint64_t get_num_tests_passed() {
 	return num_tests_passed;
 }
 
-void print_score() {
+void print_test_score() {
 	printf("\n%" PRIu64 " out of %" PRIu64 " tests passed.\n", num_tests_passed, num_tests_run);
 }
 
-void reset_score() {
+void reset_test_score() {
 	num_tests_run = num_tests_passed = 0;
 }
 
@@ -1802,13 +1799,4 @@ void run_tests() {
 	extended_euclid_correctness_tests();
 	inv_euclid_correctness_tests();
 	inv_binary_correctness_tests();
-}
-
-int main() {
-	
-	run_tests();
-	
-	print_score();
-	
-	return 0;
 }
