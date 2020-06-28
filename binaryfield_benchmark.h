@@ -1,6 +1,10 @@
 #include <binaryfield.h>
 #include <time.h>
 
+void start_timer();
+
+uint64_t stop_timer();
+
 void benchmark_add();
 
 void benchmark_mult_shiftadd();

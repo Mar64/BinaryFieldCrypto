@@ -51,7 +51,7 @@ void print_stats(benchmark_t result) {
 struct timespec start_time;
 struct timespec stop_time;
 
-clockid_t CLOCK_TYPE = CLOCK_REALTIME;
+clockid_t CLOCK_TYPE = CLOCK_PROCESS_CPUTIME_ID;
 
 void start_timer() {
 	clock_gettime(CLOCK_TYPE, &start_time);
@@ -62,14 +62,15 @@ uint64_t stop_timer() {
 	return ((uint64_t ) stop_time.tv_sec - (uint64_t) start_time.tv_sec) * 1000000000 + (stop_time.tv_nsec - start_time.tv_nsec);
 }
 
+int global_num_tests = 1000;
+
 void benchmark_add() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t b[2];
 	uint64_t c[2];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		start_timer();
@@ -78,20 +79,19 @@ void benchmark_add() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "add";
 	print_stats(result);
 }
 
 void benchmark_mult_shiftadd() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t b[2];
 	uint64_t c[2];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		start_timer();
@@ -100,20 +100,19 @@ void benchmark_mult_shiftadd() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "mult_shiftadd";
 	print_stats(result);
 }
 
 void benchmark_mult_polynomial_rlcomb() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2] = {1, 0};
 	uint64_t b[2] = {0,0};
 	uint64_t c[4];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		start_timer();
@@ -122,20 +121,19 @@ void benchmark_mult_polynomial_rlcomb() {
 	}
 
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "mult_polynomial_rlcomb";
 	print_stats(result);
 }
 
 void benchmark_mult_polynomial_lrcomb() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t b[2];
 	uint64_t c[4];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		start_timer();
@@ -144,20 +142,19 @@ void benchmark_mult_polynomial_lrcomb() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "mult_polynomial_lrcomb";
 	print_stats(result);
 }
 
 void benchmark_mult_polynomial_lrcomb_window8() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t b[2];
 	uint64_t c[4];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		start_timer();
@@ -166,19 +163,18 @@ void benchmark_mult_polynomial_lrcomb_window8() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "mult_polynomial_lrcomb_window8";
 	print_stats(result);
 }
 
 void benchmark_square_polynomial() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t square[4];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		start_timer();
 		square_polynomial(a, square);
@@ -186,20 +182,19 @@ void benchmark_square_polynomial() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "square_polynomial";
 	print_stats(result);
 }
 
 void benchmark_reduction_generic() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[4];
 	uint64_t b[4];
 	uint64_t ab[4];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		rand_element(b);
 		mult_polynomial_lrcomb_window8(a, b, ab);
@@ -209,22 +204,21 @@ void benchmark_reduction_generic() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "reduction_generic";
 	print_stats(result);
 }
 
 void benchmark_extended_euclid() {
-	int num_tests = 3;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t b[2];
 	uint64_t d[2];
 	uint64_t g[2];
 	uint64_t h[2];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		start_timer();
 		extended_euclid(a, b, d, g, h);
@@ -232,19 +226,18 @@ void benchmark_extended_euclid() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "extended_euclid";
 	print_stats(result);
 }
 
 void benchmark_inv_euclid() {
-	int num_tests = 3;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t inva[2];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		start_timer();
 		inv_euclid(a, inva);
@@ -252,19 +245,18 @@ void benchmark_inv_euclid() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "inv_euclid";
 	print_stats(result);
 }
 
 void benchmark_inv_binary() {
-	int num_tests = 50;
-	uint64_t times[num_tests];
+	uint64_t times[global_num_tests];
 	
 	uint64_t a[2];
 	uint64_t inva[2];
-	for(int i = 0; i < num_tests; i++) {
+	for(int i = 0; i < global_num_tests; i++) {
 		rand_element(a);
 		start_timer();
 		inv_binary(a, inva);
@@ -272,7 +264,7 @@ void benchmark_inv_binary() {
 	}
 	
 	benchmark_t result;
-	result.num_tests = num_tests;
+	result.num_tests = global_num_tests;
 	result.times = times;
 	result.method_name = "inv_binary";
 	print_stats(result);

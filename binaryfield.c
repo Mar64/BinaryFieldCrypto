@@ -1,4 +1,5 @@
 #include <binaryfield.h>
+#include <binaryfield_benchmark.h>
 /**  
 * BinaryField.c
 * Implements a binary field with reduction polynomial f(z) = z^127 + z^63 + 1
@@ -513,11 +514,11 @@ int degree(uint64_t * a) {
 	} else {
 		j = 1;
 	}
-	while(digit < 128 && (a[j] & digit_val) == 0) {
+	while(digit >= 0 && (a[j] & digit_val) == 0) {
 		digit--;
 		digit_val /= 2;
 	}
-	if(digit >= 128) {
+	if(digit < 0) {
 		return 0;
 	} else {
 		return 64*j + digit;
@@ -536,7 +537,19 @@ void swap_arrays(uint64_t * a, uint64_t * b, int len) {
 	}
 }	
 
-//NEED MAJOR OPTIMIZATION
+void lshift_polynomial_optimized(uint64_t * a, int shift) {
+	if(shift == 0) {
+		return;
+	} else if(shift > 63) {
+		a[1] = a[0] << (shift - 64);
+		a[0] = 0;
+	} else {
+		uint64_t carry = a[0] >> (64 - shift);
+		a[0] <<= shift;
+		a[1] <<= shift;
+		a[1] |= carry;
+	}
+}
 
 /*
 * Output is d = gcd(a,b), and g,h so that ag + bh = d
@@ -576,33 +589,27 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 			deg_u =  deg_v;
 			deg_v = temp8;
 		}
+		
 		/* Step 3.3 */
 		uint64_t shift_polynomial[2];
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
-		for(int i = 0; i < j; i++) {
-			lshift_polynomial(shift_polynomial, 2);
-		}
+		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, u, u);
 		deg_u = degree(u);
 		
 		/*Step 3.4 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
-		for(int i = 0; i < j; i++) {
-			lshift_polynomial(shift_polynomial, 2);
-		}
+		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, g1, g1);
 		
 		memcpy(shift_polynomial, h2, sizeof(uint64_t)*2);
-		for(int i = 0; i < j; i++) {
-			lshift_polynomial(shift_polynomial, 2);
-		}
+		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, h1, h1);
 	}
 	/* Step 4 */
 	swap_arrays(d, v, 2);
 	swap_arrays(g, g2, 2);
 	swap_arrays(h, h2, 2);
-	
 	//Should free stuff?
 }
 
@@ -644,17 +651,13 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 		/* Step 3.3 */
 		uint64_t shift_polynomial[2];
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
-		for(int i = 0; i < j; i++) {
-			lshift_polynomial(shift_polynomial, 2);
-		}
+		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, u, u);
 		deg_u = degree(u);
 		
 		/*Step 3.4 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
-		for(int i = 0; i < j; i++) {
-			lshift_polynomial(shift_polynomial, 2);
-		}
+		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, g1, g1);
 	}
 	/* Step 4 */
