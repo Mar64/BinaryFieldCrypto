@@ -505,7 +505,7 @@ void reduction_generic(uint64_t * c) {
 * Preconditions:
 *	a has length 2
 */
-int degree(uint64_t * a) {
+int degree_oldreference(uint64_t * a) {
 	int digit = 63;
 	uint64_t digit_val = pow2to63;
 	int j;
@@ -522,6 +522,39 @@ int degree(uint64_t * a) {
 		return 0;
 	} else {
 		return 64*j + digit;
+	}
+}
+
+int degree_len2(uint64_t * a) {
+	if(a[1] == 0) {
+		if(a[0] == 0) {
+			return 0;
+		}
+		int upper = a[0] >> 32;
+		if(upper == 0) {
+			return 31 - __builtin_clz(a[0]);
+		}
+		return 63 - __builtin_clz(upper);
+	} else {
+		int upper = a[1] >> 32;
+		if(upper == 0) {
+			return 95 - __builtin_clz(a[1]);
+		}
+		return 127 - __builtin_clz(upper);
+	}
+}
+
+int degree(uint64_t * a, int len) {
+	int degree = 0;
+	for(int i = len -1; i >= 0; i--) {
+		if(a[i] == 0) {
+			continue;
+		}
+		int upper = a[i] >> 32;
+		if(upper == 0) {
+			return 31 + 64*i - __builtin_clz(a[i]);
+		}
+		return 63 + 64*i - __builtin_clz(upper);
 	}
 }
 
@@ -563,8 +596,8 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 	uint64_t v[2];
 	memcpy(u, a, sizeof(uint64_t)*2);
 	memcpy(v, b, sizeof(uint64_t)*2);
-	int deg_u = degree(u);
-	int deg_v = degree(v);
+	int deg_u = degree_len2(u);
+	int deg_v = degree_len2(v);
 
 	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
 	uint64_t g1[2] = {1, 0 };
@@ -595,7 +628,7 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
 		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, u, u);
-		deg_u = degree(u);
+		deg_u = degree_len2(u);
 		
 		/*Step 3.4 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
@@ -625,7 +658,27 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 	uint64_t v[2];
 	memcpy(u, a, sizeof(uint64_t)*2);
 	memcpy(v, f, sizeof(uint64_t)*2);
-	int deg_u = degree(u);
+	int deg_u;
+	if(u[1] == 0) {
+		if(u[0] == 0) {
+			deg_u = 0;
+		} else {
+			int upper = u[0] >> 32;
+			if(upper == 0) {
+				deg_u = 31 - __builtin_clz(u[0]);
+			} else {
+				deg_u = 63 - __builtin_clz(upper);
+			}
+		}
+	} else {
+		int upper = u[1] >> 32;
+		if(upper == 0) {
+			deg_u = 95 - __builtin_clz(u[1]);
+		} else {
+			deg_u = 127 - __builtin_clz(upper);
+		}
+	}
+	//int deg_u = degree_len2(u);
 	int deg_v = 127;
 
 	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
@@ -653,7 +706,26 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
 		lshift_polynomial_optimized(shift_polynomial, j);
 		add(shift_polynomial, u, u);
-		deg_u = degree(u);
+		if(u[1] == 0) {
+			if(u[0] == 0) {
+				deg_u = 0;
+			} else {
+				int upper = u[0] >> 32;
+				if(upper == 0) {
+					deg_u = 31 - __builtin_clz(u[0]);
+				} else {
+					deg_u = 63 - __builtin_clz(upper);
+				}
+			}
+		} else {
+			int upper = u[1] >> 32;
+			if(upper == 0) {
+				deg_u = 95 - __builtin_clz(u[1]);
+			} else {
+				deg_u = 127 - __builtin_clz(upper);
+			}
+		}
+		//deg_u = degree_len2(u);
 		
 		/*Step 3.4 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);

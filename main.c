@@ -5,9 +5,9 @@
 int main() {	
 	benchmark_all();
 	
-	//run_tests();
+	run_tests();
 	
-	//print_test_score();
+	print_test_score();
 	
 	return 0;
 }

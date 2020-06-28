@@ -90,6 +90,13 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a);
 */
 void inv_binary(uint64_t * a, uint64_t * inv_a);
 
+/*
+ * Degree of polynomial
+ * Precondition:
+ * 	a has length 2
+ */
+ 
+
 /* ======== Helper Methods: ============= */
 
 /*
