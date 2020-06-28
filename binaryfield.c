@@ -592,18 +592,64 @@ void lshift_polynomial_optimized(uint64_t * a, int shift) {
 */
 void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uint64_t * h) {
 	/* Step 1 */
-	uint64_t u[2];
-	uint64_t v[2];
+	uint64_t * u = malloc(2*sizeof(uint64_t));
+	uint64_t * v = malloc(2*sizeof(uint64_t));
 	memcpy(u, a, sizeof(uint64_t)*2);
 	memcpy(v, b, sizeof(uint64_t)*2);
-	int deg_u = degree_len2(u);
-	int deg_v = degree_len2(v);
+	//int deg_u = degree_len2(u);
+	int deg_u;
+	if(u[1] == 0) {
+		if(u[0] == 0) {
+			deg_u = 0;
+		} else {
+			int upper = u[0] >> 32;
+			if(upper == 0) {
+				deg_u = 31 - __builtin_clz(u[0]);
+			} else {
+				deg_u = 63 - __builtin_clz(upper);
+			}
+		}
+	} else {
+		int upper = u[1] >> 32;
+		if(upper == 0) {
+			deg_u = 95 - __builtin_clz(u[1]);
+		} else {
+			deg_u = 127 - __builtin_clz(upper);
+		}
+	}
+	//int deg_v = degree_len2(v);
+	int deg_v;
+	if(v[1] == 0) {
+		if(v[0] == 0) {
+			deg_v = 0;
+		} else {
+			int upper = v[0] >> 32;
+			if(upper == 0) {
+				deg_v = 31 - __builtin_clz(v[0]);
+			} else {
+				deg_v = 63 - __builtin_clz(upper);
+			}
+		}
+	} else {
+		int upper = v[1] >> 32;
+		if(upper == 0) {
+			deg_v = 95 - __builtin_clz(v[1]);
+		} else {
+			deg_v = 127 - __builtin_clz(upper);
+		}
+	}
 
 	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
-	uint64_t g1[2] = {1, 0 };
-	uint64_t g2[2] = {0, 0 };
-	uint64_t h1[2] = {0, 0 };
-	uint64_t h2[2] = {1, 0 };
+	uint64_t * g1 = malloc(2*sizeof(uint64_t));
+	g1[0] = 1;
+	g1[1] = 0;
+	uint64_t * g2 = malloc(2*sizeof(uint64_t));
+	g2[0] = g2[1] = 0;
+	uint64_t * h1 = malloc(2*sizeof(uint64_t));
+	h1[0] = h1[1] = 0;
+	uint64_t * h2 = malloc(2*sizeof(uint64_t));
+	h2[0] = 1;
+	h2[1] = 0;
 	
 	/* Step 3 */
 	while (u[0] > 0 || u[1] > 0) {
@@ -612,9 +658,17 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 		
 		/* Step 3.2 */
 		if(j < 0) {
-			swap_arrays(u, v, 2);
-			swap_arrays(g1, g2, 2);
-			swap_arrays(h1, h2, 2);
+			uint64_t * tmp = u;
+			u = v;
+			v = tmp;
+			
+			tmp = g1;
+			g1 = g2;
+			g2 = tmp;
+			
+			tmp = h1;
+			h1 = h2;
+			h2 = tmp;
 			
 			j = -j;
 			
@@ -626,24 +680,93 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 		/* Step 3.3 */
 		uint64_t shift_polynomial[2];
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
-		lshift_polynomial_optimized(shift_polynomial, j);
-		add(shift_polynomial, u, u);
-		deg_u = degree_len2(u);
+		//lshift_polynomial_optimized(shift_polynomial, j);
+		if(j != 0) {
+			if(j > 63) {
+				shift_polynomial[1] = shift_polynomial[0] << (j - 64);
+				shift_polynomial[0] = 0;
+			} else {
+				uint64_t carry = shift_polynomial[0] >> (64 - j);
+				shift_polynomial[0] <<= j;
+				shift_polynomial[1] <<= j;
+				shift_polynomial[1] |= carry;
+			}
+		}
+		//add(shift_polynomial, u, u);
+		u[0] = shift_polynomial[0] ^ u[0];
+		u[1] = shift_polynomial[1] ^ u[1];
+		//deg_u = degree_len2(u);
+		if(u[1] == 0) {
+			if(u[0] == 0) {
+				deg_u = 0;
+			} else {
+				int upper = u[0] >> 32;
+				if(upper == 0) {
+					deg_u = 31 - __builtin_clz(u[0]);
+				} else {
+					deg_u = 63 - __builtin_clz(upper);
+				}
+			}
+		} else {
+			int upper = u[1] >> 32;
+			if(upper == 0) {
+				deg_u = 95 - __builtin_clz(u[1]);
+			} else {
+				deg_u = 127 - __builtin_clz(upper);
+			}
+		}
 		
 		/*Step 3.4 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
-		lshift_polynomial_optimized(shift_polynomial, j);
-		add(shift_polynomial, g1, g1);
+		//lshift_polynomial_optimized(shift_polynomial, j);
+		if(j != 0) {
+			if(j > 63) {
+				shift_polynomial[1] = shift_polynomial[0] << (j - 64);
+				shift_polynomial[0] = 0;
+			} else {
+				uint64_t carry = shift_polynomial[0] >> (64 - j);
+				shift_polynomial[0] <<= j;
+				shift_polynomial[1] <<= j;
+				shift_polynomial[1] |= carry;
+			}
+		}
+		//add(shift_polynomial, g1, g1);
+		g1[0] = shift_polynomial[0] ^ g1[0];
+		g1[1] = shift_polynomial[1] ^ g1[1];
 		
 		memcpy(shift_polynomial, h2, sizeof(uint64_t)*2);
-		lshift_polynomial_optimized(shift_polynomial, j);
-		add(shift_polynomial, h1, h1);
+		//lshift_polynomial_optimized(shift_polynomial, j);
+		if(j != 0) {
+			if(j > 63) {
+				shift_polynomial[1] = shift_polynomial[0] << (j - 64);
+				shift_polynomial[0] = 0;
+			} else {
+				uint64_t carry = shift_polynomial[0] >> (64 - j);
+				shift_polynomial[0] <<= j;
+				shift_polynomial[1] <<= j;
+				shift_polynomial[1] |= carry;
+			}
+		}
+		//add(shift_polynomial, h1, h1);
+		h1[0] = shift_polynomial[0] ^ h1[0];
+		h1[1] = shift_polynomial[1] ^ h1[1];
 	}
 	/* Step 4 */
-	swap_arrays(d, v, 2);
-	swap_arrays(g, g2, 2);
-	swap_arrays(h, h2, 2);
-	//Should free stuff?
+	//swap_arrays(d, v, 2);
+	d[0] = v[0];
+	d[1] = v[1];
+	//swap_arrays(g, g2, 2);
+	g[0] = g2[0];
+	g[1] = g2[1];
+	//swap_arrays(h, h2, 2);
+	h[0] = h2[0];
+	h[1] = h2[1];
+	free(u);
+	free(v);
+	free(g1);
+	free(g2);
+	free(h1);
+	free(h2);
 }
 
 /* 
