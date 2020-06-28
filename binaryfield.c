@@ -654,11 +654,12 @@ void extended_euclid(uint64_t * a, uint64_t * b, uint64_t * d, uint64_t * g, uin
 */
 void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 	/* Step 1 */
-	uint64_t u[2];
-	uint64_t v[2];
+	uint64_t * u = malloc(2* sizeof(uint64_t));
+	uint64_t * v = malloc(2*sizeof(uint64_t));
 	memcpy(u, a, sizeof(uint64_t)*2);
 	memcpy(v, f, sizeof(uint64_t)*2);
 	int deg_u;
+	/* Calculating degree of u */
 	if(u[1] == 0) {
 		if(u[0] == 0) {
 			deg_u = 0;
@@ -682,8 +683,11 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 	int deg_v = 127;
 
 	/* Step 2 */ //Size might be wrong but my logic is that deg(u)-deg(v) is max 126, and original g1 can only feed from u-v so this is max degree
-	uint64_t g1[2] = {1, 0 };
-	uint64_t g2[2] = {0, 0 };
+	uint64_t * g1 = malloc(2*sizeof(uint64_t));
+	g1[0] = 1;
+	g1[1] = 0;
+	uint64_t * g2 = malloc(2*sizeof(uint64_t));
+	g2[0] = g2[1] = 0;
 	
 	/* Step 3 */
 	while (!(u[0] == 1 && u[1] == 0)) {
@@ -692,8 +696,15 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 		
 		/* Step 3.2 */
 		if(j < 0) {
-			swap_arrays(u, v, 2);
-			swap_arrays(g1, g2, 2);
+			//swap_arrays(u, v, 2);
+			uint64_t * tmp = u;
+			u = v;
+			v = tmp;
+			
+			tmp = g1;
+			g1 = g2;
+			g2 = tmp;
+			//swap_arrays(g1, g2, 2);
 			
 			j = -j;
 			
@@ -703,9 +714,25 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 		}
 		/* Step 3.3 */
 		uint64_t shift_polynomial[2];
+		/* shift v */
 		memcpy(shift_polynomial, v, sizeof(uint64_t)*2);
-		lshift_polynomial_optimized(shift_polynomial, j);
-		add(shift_polynomial, u, u);
+		if(j != 0) {
+			if(j > 63) {
+				shift_polynomial[1] = shift_polynomial[0] << (j - 64);
+				shift_polynomial[0] = 0;
+			} else {
+				uint64_t carry = shift_polynomial[0] >> (64 - j);
+				shift_polynomial[0] <<= j;
+				shift_polynomial[1] <<= j;
+				shift_polynomial[1] |= carry;
+			}
+		}
+		//lshift_polynomial_optimized(shift_polynomial, j);
+		u[0] = shift_polynomial[0] ^ u[0];
+		u[1] = shift_polynomial[1] ^ u[1];
+		//add(shift_polynomial, u, u);
+		
+		/* Calculating degree of u */
 		if(u[1] == 0) {
 			if(u[0] == 0) {
 				deg_u = 0;
@@ -728,12 +755,31 @@ void inv_euclid(uint64_t * a, uint64_t * inv_a) {
 		//deg_u = degree_len2(u);
 		
 		/*Step 3.4 */
+		/*shift g2 */
 		memcpy(shift_polynomial, g2, sizeof(uint64_t)*2);
-		lshift_polynomial_optimized(shift_polynomial, j);
-		add(shift_polynomial, g1, g1);
+		if(j != 0) {
+			if(j > 63) {
+				shift_polynomial[1] = shift_polynomial[0] << (j - 64);
+				shift_polynomial[0] = 0;
+			} else {
+				uint64_t carry = shift_polynomial[0] >> (64 - j);
+				shift_polynomial[0] <<= j;
+				shift_polynomial[1] <<= j;
+				shift_polynomial[1] |= carry;
+			}
+		}
+		//lshift_polynomial_optimized(shift_polynomial, j);
+		g1[0] = shift_polynomial[0] ^ g1[0];
+		g1[1] = shift_polynomial[1] ^ g1[1];
+		//add(shift_polynomial, g1, g1);
 	}
 	/* Step 4 */
-	swap_arrays(inv_a, g1, 2);
+	inv_a[0] = g1[0];
+	inv_a[1] = g1[1];
+	free(u);
+	free(v);
+	free(g1);
+	free(g2);
 }
 
 /*
